@@ -997,7 +997,7 @@ document.addEventListener('touchstart', ()=>{ if(!audio) sBtn.style.opacity = 1;
     s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t+1.1);
   }
   var lastD=0, lastBreath=0, jumped=false;
-  addEventListener('scroll', function(){ var w=document.getElementById('wall'); if(!w) return; var r=w.getBoundingClientRect(), vh=innerHeight; var q=-r.top/Math.max(1, r.height-vh); if(q > .45) fire(); }, {passive:true});
+  addEventListener('scroll', function(){ var w=document.getElementById('wall'); if(!w) return; var r=w.getBoundingClientRect(), vh=innerHeight; var q=-r.top/Math.max(1, r.height-vh); if(q > .45) fire(); if(q < .05) jumped=false; }, {passive:true});
   addEventListener('scroll', function(){
     if(!audio || typeof D === 'undefined') return;
     if(D - lastD > .06){ lastD = D; impact(.1 + D*.14); }
