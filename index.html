@@ -528,7 +528,7 @@ footer .btn{margin-top:18px;background:#2a0a07;box-shadow:none;color:#c9bfb3}
 </footer>
 
 <div id="flash"></div>
-<button id="sound">♪ 环境音：关</button>
+<button id="sound" style="display:none">♪ 环境音：关</button>
 <style>
 .print{background:#f2ece2;padding:11px 11px 34px;border-radius:3px;box-shadow:0 40px 90px -34px #000,0 0 0 1px rgba(255,255,255,.07);width:min(68vw,330px);transform:rotate(-2deg);position:relative;opacity:0;transition:opacity .9s;margin:0 auto}
 .pimg{position:relative;aspect-ratio:3/4;overflow:hidden;background:radial-gradient(circle at 50% 46%,#2b251f 0%,#171310 46%,#080605 90%)}
@@ -934,6 +934,99 @@ measure();
 frame();
 poke();
 document.addEventListener('touchstart', ()=>{ if(!audio) sBtn.style.opacity = 1; }, {passive:true, once:true});
+</script>
+<style>
+#flash2{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9997;transition:opacity .07s}
+#flash2.on{opacity:.82}
+#face{position:fixed;inset:0;display:grid;place-items:center;opacity:0;pointer-events:none;z-index:9998;transition:opacity .05s}
+#face.on{opacity:1}
+#face .m{width:78vmin;height:78vmin;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 50% 44%,#311313 0%,#0b0404 60%,#000 100%);
+  box-shadow:0 0 90px #a00 inset,0 0 140px #500;filter:contrast(1.25)}
+#face .m i{position:absolute;top:37%;width:19%;height:10%;border-radius:50%;background:#000;
+  box-shadow:0 0 20px #f00 inset,0 0 30px #400}
+#face .m i:nth-child(1){left:19%}
+#face .m i:nth-child(2){right:19%}
+@keyframes quake{
+  0%{transform:translate(0,0) rotate(0)}
+  20%{transform:translate(-3px,2px) rotate(-.4deg)}
+  40%{transform:translate(3px,-2px) rotate(.4deg)}
+  60%{transform:translate(-2px,3px) rotate(-.3deg)}
+  80%{transform:translate(2px,-3px) rotate(.3deg)}
+  100%{transform:translate(0,0) rotate(0)}
+}
+.quake{animation:quake .16s infinite}
+</style>
+<div id="flash2"></div>
+<div id="face"><div class="m"><i></i><i></i></div></div>
+<script>
+(function(){
+  if(typeof startAudio !== 'function') return;
+  function auto(){ if(!audio) startAudio(); if(AC && AC.state==='suspended') AC.resume(); }
+  ['click','touchend'].forEach(function(ev){ addEventListener(ev, auto, {passive:true}); });
+  function impact(v){
+    if(!audio) return;
+    var t=AC.currentTime, o=AC.createOscillator(), g=AC.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(26,t+.38);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.012); g.gain.exponentialRampToValueAtTime(.001,t+.55);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+.6);
+    var s=AC.createBufferSource(); s.buffer=nbuf;
+    var f=AC.createBiquadFilter(); f.type='bandpass'; f.frequency.value=3000; f.Q.value=5;
+    var g2=AC.createGain(); g2.gain.setValueAtTime(v*.4,t); g2.gain.exponentialRampToValueAtTime(.001,t+.22);
+    s.connect(f); f.connect(g2); g2.connect(master); s.start(t); s.stop(t+.26);
+  }
+  function screech(){
+    if(!audio) return;
+    var t=AC.currentTime, o=AC.createOscillator(), g=AC.createGain();
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(2600,t);
+    o.frequency.exponentialRampToValueAtTime(4400,t+.16);
+    o.frequency.exponentialRampToValueAtTime(900,t+.5);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.16,t+.02);
+    g.gain.exponentialRampToValueAtTime(.001,t+.55);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+.6);
+    impact(.55);
+  }
+  function breath(){
+    if(!audio) return;
+    var t=AC.currentTime, s=AC.createBufferSource(); s.buffer=nbuf;
+    var f=AC.createBiquadFilter(); f.type='bandpass';
+    f.frequency.setValueAtTime(620,t); f.frequency.linearRampToValueAtTime(1500,t+.7);
+    var g=AC.createGain(); g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(.085,t+.28); g.gain.linearRampToValueAtTime(0,t+1.05);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t+1.1);
+  }
+  var lastD=0, lastBreath=0, jumped=false;
+  addEventListener('scroll', function(){ var w=document.getElementById('wall'); if(!w) return; var r=w.getBoundingClientRect(), vh=innerHeight; var q=-r.top/Math.max(1, r.height-vh); if(q > .45) fire(); }, {passive:true});
+  addEventListener('scroll', function(){
+    if(!audio || typeof D === 'undefined') return;
+    if(D - lastD > .06){ lastD = D; impact(.1 + D*.14); }
+    if(D > .78 && Date.now() - lastBreath > 3000){ lastBreath = Date.now(); breath(); }
+  }, {passive:true});
+  function fire(){
+    if(jumped) return;
+    jumped = true;
+    screech();
+    var f=document.getElementById('face'), fl=document.getElementById('flash2');
+    if(f) f.classList.add('on');
+    if(fl) fl.classList.add('on');
+
+    setTimeout(function(){ if(fl)fl.classList.remove('on'); }, 120); setTimeout(function(){ if(f)f.classList.remove('on'); }, 460);
+    setTimeout(function(){ document.body.classList.remove('quake'); }, 1100);
+  }
+  setInterval(function(){
+    var w=document.getElementById('wall');
+    if(!w) return;
+    var r=w.getBoundingClientRect(), vh=innerHeight;
+    var p = -r.top / Math.max(1, r.height - vh);
+    var st = w.querySelector('.stick');
+    if(st){
+      if(p > .02 && p < .98) st.classList.add('quake');
+      else st.classList.remove('quake');
+    }
+    if(p > .45) fire();
+  }, 140);
+})();
 </script>
 </body>
 </html>
